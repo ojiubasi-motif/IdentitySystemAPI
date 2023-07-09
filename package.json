@@ -1,0 +1,25 @@
+{
+  "name": "identitysystem",
+  "version": "1.0.0",
+  "description": "API for identity management system",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "Oji Ubasi",
+  "license": "ISC",
+  "dependencies": {
+    "crypto-js": "^4.1.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.1",
+    "moment": "^2.29.4",
+    "mongodb": "4.0",
+    "mongoose": "^6.5.2",
+    "nodemon": "^2.0.22",
+    "uuid": "^9.0.0"
+  },
+  "type": "module"
+}
