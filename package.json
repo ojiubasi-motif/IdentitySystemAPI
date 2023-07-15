@@ -11,7 +11,7 @@
   "author": "Oji Ubasi",
   "license": "ISC",
   "engines": {
-    "node": "14.x"
+    "node": "18.x"
   },
   "dependencies": {
     "crypto-js": "^4.1.1",
