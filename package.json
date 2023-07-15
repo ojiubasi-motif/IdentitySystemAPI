@@ -10,9 +10,6 @@
   "keywords": [],
   "author": "Oji Ubasi",
   "license": "ISC",
-  "engines": {
-    "node": "14.x"
-  },
   "dependencies": {
     "crypto-js": "^4.1.1",
     "dotenv": "^16.3.1",
