@@ -1,22 +1,65 @@
 import express from "express";
 import Registrant from "../models/Registeration.js";
+import Auth from "../models/Auth.js";
 import { v4 as uuidv4 } from "uuid";
 import verify from "../middleware/verifyToken.js";
-// import CryptoJS from "crypto-js";
+import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
 
 const router = express.Router();
 // register a user
-router.post("/register", async (req, res) => {
+
+router.post("/signup", async (req, res) => {
+  const { email, phone, first_name, last_name, password } = req.body;
+
+  if (!email || !phone || !first_name || !last_name) {
+    res.status(403).json("please supply all the fields");
+  } else {
+    // if user didn't supply a password, generate one for him/her
+    const initialPassword = "" + Math.floor(Math.random() * 10000 + 1);
+    const newUser = new Auth({
+      email,
+      phone,
+      first_name,
+      last_name,
+      password: CryptoJS.AES.encrypt(
+        password ? password : initialPassword,
+        process.env.PW_CRYPT
+      ).toString(),
+    });
+    try {
+      let emailAlreadyExist = await Auth.findOne({ email }, "email"); //return only the email field
+      let phoneAlreadyExist = await Auth.findOne({ phone }, "phone"); //return only the phone field
+      console.log("search result==>", emailAlreadyExist, phoneAlreadyExist);
+      if (
+        emailAlreadyExist?.email == email ||
+        phoneAlreadyExist?.phone == phone
+      ) {
+        res
+          .status(403)
+          .json("A user with this email and/or phone already exist");
+      }
+      const savedUser = await newUser.save();
+      const {
+        password: savedPassword,
+        createdAt,
+        updatedAt,
+        ...data
+      } = savedUser._doc;
+      res
+        .status(201)
+        .json({ data, password: !password ? initialPassword : null });
+    } catch (err) {
+      console.log(err);
+    }
+  }
+});
+
+router.post("/register", verify, async (req, res) => {
   const {
-    first_name,
-    last_name,
     sex,
     other_names,
     birth_date,
-    birth_city,
-    birth_state,
-    birth_country,
     mother_maiden_name,
     p_house_number,
     p_street,
@@ -24,100 +67,74 @@ router.post("/register", async (req, res) => {
     p_city,
     p_state,
     p_landmark,
-    r_house_number,
-    r_street,
-    r_postal_code,
-    r_city,
-    r_state,
-    r_landmark,
     nationality,
     religion,
     m_first_name,
     m_last_name,
+    mother_nationality,
     f_first_name,
     f_last_name,
+    f_nationality,
     state_of_origin,
     lg_of_origin,
     disable,
     disable_detail,
     level_of_education,
     marital_status,
-    s_first_name,
-    s_last_name,
     nok_first_name,
     nok_last_name,
     nok_relationship,
-    nok_house_number,
-    nok_street,
-    nok_postal_code,
-    nok_city,
-    nok_state,
-    nok_landmark,
-    mobile,
+    nok_title,
     tel,
-    email,
     convicted,
-    occupation,
-    emp_name,
-    emp_tel,
-    emp_house_number,
-    emp_street,
-    emp_postal_code,
-    emp_city,
-    emp_state,
-    emp_landmark,
-    blood_group,
+    occupation,   
     weight,
     height,
-    hair_color,
-    eye_color,
+    utility_bill_type
   } = req.body;
+  const {
+    email: verifiedEmail,
+    phone: verifiedPhone,
+    first_name: verifiedFirstName,
+    last_name: verifiedLAstName,
+  } = req.user;
+
+  // console.log("verified user details==>", req.user);
 
   const currdate = new Date();
-  // const uuidSeed = "jdkdhekeksmdk";
-  const reference = "" + Math.floor(Math.random() * 1000000 + 1);
- 
+  const bvn = "" + Math.floor(Math.random() * 10000000 + 1);
+
+
   const newUser = new Registrant({
     nin: uuidv4(),
+    bvn,
     name: {
-      first_name,
-      last_name,
+      first_name:verifiedFirstName ,
+      last_name: verifiedLAstName,
       other_names,
     },
     sex,
-    birth_data: {
-      date: currdate.getFullYear(),
-      city: birth_city,
-      state: birth_state,
-      country: birth_country,
+    bio: {
+      birth_certificate_id:`BC${bvn}`,
+      date_of_birth:  Date.now(),
+      weight,
+      height,
     },
     mother_maiden_name,
     residential_address: {
-      house_number: r_house_number,
-      street: r_street,
-      postal_code: r_postal_code,
-      city: r_city,
-      state: r_state,
-      landmark: r_landmark,
+      utility_bill_type,
+      bill_number:utility_bill_type?`UB${bvn}`:null
     },
     permanent_address: {
       house_number: p_house_number,
       street: p_street,
-      postal_code: p_postal_code,
+      postal_code:p_postal_code,
       city: p_city,
       state: p_state,
       landmark: p_landmark,
     },
     nationality,
     religion,
-    mother: {
-      first_name: m_first_name,
-      last_name: m_last_name,
-    },
-    father: {
-      first_name: f_first_name,
-      last_name: f_last_name,
-    },
     state_of_origin,
     lg_of_origin,
     disabilities: {
@@ -125,53 +142,47 @@ router.post("/register", async (req, res) => {
       details: disable_detail,
     },
     level_of_education,
+
     marital_status,
-    spouse_name: {
-      first_name: s_first_name,
-      last_name: s_last_name,
+    marital_certificate_no: marital_status !== "SINGLE"?`MC${bvn}`:null,
+    mother: {
+      first_name: m_first_name,
+      last_name: m_last_name,
+      maiden_name:mother_maiden_name,
+      nationality: mother_nationality,
+    },
+    father: {
+      first_name:f_first_name ,
+      last_name: f_last_name,
+      nationality: f_nationality,
     },
     next_of_kin: {
       first_name: nok_first_name,
       last_name: nok_last_name,
-      address: {
-        house_number: nok_house_number,
-        street: nok_street,
-        postal_code: nok_postal_code,
-        city: nok_city,
-        state: nok_state,
-        landmark: nok_landmark,
-      },
+      title: nok_title,
       relationship: nok_relationship,
     },
     contact: {
-      mobile,
+      mobile: verifiedPhone,
       tel,
-      email,
+      email:verifiedEmail,
     },
-    convicted,
-    occupation,
-    employer: {
-      name: emp_name,
-      address: {
-        house_number: emp_house_number,
-        street: emp_street,
-        postal_code: emp_postal_code,
-        city: emp_city,
-        state: emp_state,
-        landmark: emp_landmark,
-      },
-      tel: emp_tel,
+    social_status: {
+      convicted,
+      case_file_Id:convicted? `CF${bvn}`:null,
     },
-    physical_exam: {
-      blood_group,
-      weight,
-      height,
-      eye_color,
-      hair_color,
+    occupation: {
+      status:occupation,
+      employer_CAC_num: occupation ==="EMPLOYED" || occupation ==="BUSINESS"?`CAC${bvn}`:null,
+      TIN:occupation ==="SELF-EMPLOYED"?`TIN${bvn}`:null
     },
   });
 
   try {
+    const userHasRegistered = await Registrant.findOne({"contact.mobile":verifiedPhone},'contact.mobile');
+    if(userHasRegistered){
+      res.status(403).json("this user has done registration");
+    }
     const user = await newUser.save();
     const { nin: registeredNin, ...data } = user._doc;
     res.status(201).json({ registeredNin });
@@ -180,31 +191,49 @@ router.post("/register", async (req, res) => {
   }
 });
 
+// login===NB:you can login with either your email or phone
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { user, password } = req.body;
   try {
     // check the kind of input supplied by the user for login
-    const userData = await Registrant.findOne({'contact.email':email});
-    if (!userData) {
-      res.status(401).json("wrong credentials, no user with this email is found");
-    } else {
-     
-      const originalPw = "12345";
+    const userData =
+      user.toString().search("@") >= 0
+        ? await Auth.findOne({ email: user })
+        : await Auth.findOne({ phone: user });
 
-      if (originalPw !== password) {
-        res.status(401).json("wrong password, check your password. it must be '12345'");
+    if (!userData) {
+      res.status(401).json("no user found for this email/phone, signup first");
+    } else {
+      const bytes = CryptoJS.AES.decrypt(
+        userData.password,
+        process.env.PW_CRYPT
+      );
+      const originalPassword = bytes.toString(CryptoJS.enc.Utf8);
+
+      if (originalPassword !== password) {
+        res.status(401).json("wrong login credentials, couldn't login");
       } else {
         // send a unique secret token for loggedin user
-        const accessToken = jwt.sign({id:userData?._id, mobile:userData?.contact?.mobile},process.env.PW_CRYPT,{expiresIn:"1d"})
+        const accessToken = jwt.sign(
+          {
+            first_name: userData?.first_name,
+            last_name: userData?.last_name,
+            email: userData?.email,
+            phone: userData?.phone,
+          },
+          process.env.PW_CRYPT,
+          { expiresIn: "1d" }
+        );
         //do not include the password when sending query response
         const { password: dbPword, ...data } = userData._doc;
-        res.status(200).json({...data, accessToken});
+        res.status(200).json({ ...data, accessToken });
       }
     }
   } catch (err) {
     res.status(500).json(err);
   }
 });
+
 
 // update the user record, be it password or another data
 router.put("/:id", verify, async (req, res) => {
@@ -219,8 +248,8 @@ router.put("/:id", verify, async (req, res) => {
     // }
     // if it's not the password being updated, then continue with the try/catch
     // check if user wants to update email
-    if(req.body?.contact?.email){
-      res.status(403).json("you cannot edit your email, contact admin")
+    if (req.body?.contact?.email) {
+      res.status(403).json("you cannot edit your email, contact admin");
     }
 
     try {
@@ -272,39 +301,45 @@ router.get("/", verify, async (req, res) => {
   const query = req.query.new;
   // you must be a logged in user in order to have access to this resource
   if (req?.user?.mobile) {
-    try { 
+    try {
       // if there's query to return new users, return only the latest 2 registered else return all
-      const user =query? await Registrant.find().sort({_id:-1}).limit(2): await Registrant.find(); 
+      const user = query
+        ? await Registrant.find().sort({ _id: -1 }).limit(2)
+        : await Registrant.find();
       res.status(200).json(user);
-    } catch (error) { 
+    } catch (error) {
       res.status(500).json(error);
     }
   } else {
-    res.status(403).json("you are not authorised to access this route, please register and/or log in with email=>[registeredEmail], password:==>>'12345'")
+    res
+      .status(403)
+      .json(
+        "you are not authorised to access this route, please register and/or log in with email=>[registeredEmail], password:==>>'12345'"
+      );
   }
 });
 
 // get registrants stats
-router.get("/stats", async(req, res)=>{
+router.get("/stats", async (req, res) => {
   // let's find total users per month
   try {
     const data = await Registrant.aggregate([
       {
-        $project:{
-          monthlyStats:{$month: "$createdAt"}
-        }
+        $project: {
+          monthlyStats: { $month: "$createdAt" },
+        },
       },
       {
-        $group:{
+        $group: {
           _id: "$monthlyStats",
-          total:{$sum:1}//return the total users per month
-        }
-      }
+          total: { $sum: 1 }, //return the total users per month
+        },
+      },
     ]);
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json(error)
+    res.status(500).json(error);
   }
-})
+});
 
 export default router;
