@@ -300,13 +300,13 @@ router.get("/", verify, async (req, res) => {
   // check if route contains 'new' query i.e "/?new==true"
   const query = req.query.new;
   // you must be a logged in user in order to have access to this resource
-  if (req?.user?.mobile) {
+  if (req?.user?.phone && req?.user?.email) {
     try {
       // if there's query to return new users, return only the latest 2 registered else return all
-      const user = query
-        ? await Registrant.find().sort({ _id: -1 }).limit(2)
+      const users = query
+        ? await Registrant.find().sort({ _id: -1 }).limit(10).select("-password")
         : await Registrant.find();
-      res.status(200).json(user);
+      res.status(200).json(users);
     } catch (error) {
       res.status(500).json(error);
     }
