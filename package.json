@@ -2,9 +2,12 @@
   "name": "identitysystem",
   "version": "1.0.0",
   "description": "API for identity management system",
-  "main": "api/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node api/index.js"
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": "18.x"
   },
   "keywords": [],
   "author": "Oji Ubasi",
