@@ -25,6 +25,7 @@ const AuthSchema = new mongoose.Schema({
         maxlength:200,
         unique:true
     },
+    admin:{type:String},
     password:{
         type:String,
         maxlength:200,

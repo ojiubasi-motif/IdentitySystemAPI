@@ -7,11 +7,11 @@ function verify(req, res, next){
         const token = authHeader.split(" ")[1];
 
         jwt.verify(token, process.env.PW_CRYPT, (err, user)=>{
-            if(err) res.status(403).json("your token is invalid");
+            if(err) return res.status(403).json("your token is invalid");
             req.user = user
             next();//continue execution after verification
         })
-    }else{
+    }else{ 
         return res.status(401).json("you do not have a token, please login");
     }
 }
