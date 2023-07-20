@@ -16,21 +16,18 @@ const AuthSchema = new mongoose.Schema({
     first_name:{
         type:String,
         required:true,
-        maxlength:200,
-        unique:true
+       
     },
     last_name:{
         type:String,
         required:true,
-        maxlength:200,
-        unique:true
+        
     },
-    admin:{type:String},
+    is_admin:{type:Boolean, default:false},
     password:{
         type:String,
-        maxlength:200,
     }
-},{
+},{ 
     timestamps:true
 });
 

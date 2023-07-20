@@ -12,7 +12,7 @@ router.post("/users", async (req, res) => {
   const { email, phone, first_name, last_name, password } = req.body;
 
   if (!email || !phone || !first_name || !last_name) {
-    res.status(403).json("please supply all the fields");
+    res.status(403).json({msg:"supply all fields",type:"INCOMPLETE_DATA",code:605});
   } else {
     // if user didn't supply a password, generate one for him/her
     const initialPassword = "" + Math.floor(Math.random() * 10000 + 1);
@@ -25,7 +25,7 @@ router.post("/users", async (req, res) => {
         password ? password : initialPassword,
         process.env.PW_CRYPT
       ).toString(),
-    });
+    }); 
     try {
       let emailAlreadyExist = await Auth.findOne({ email }, "email"); //return only the email field
       let phoneAlreadyExist = await Auth.findOne({ phone }, "phone"); //return only the phone field
@@ -35,7 +35,7 @@ router.post("/users", async (req, res) => {
       ) {
         res
           .status(403)
-          .json("A user with this email and/or phone already exist");
+          .json({msg:"A user with this email and/or phone already exist",type:"ERROR",code:600});
       } else {
         const savedUser = await newUser.save();
         const {
@@ -197,13 +197,13 @@ router.post("/users/complete-registration", verify, async (req, res) => {
       (await phoneHasRegistered.exec()) !== null ||
       (await emailHasRegistered.exec()) !== null
     ) {
-      return res.status(403).json("this user has done registration");
+      return res.status(403).json({msg:"there is a user with this email and/or phone",type:"EXIST",code:600});
     }
-    const user = await newUser.save().select("nin");
-    // const { nin: registeredNin, ...data } = user._doc;
-    res.status(201).json({ registeredNin:user});
+    const user = await newUser.save();
+    const { nin: registeredNin, ...data } = user._doc;
+    res.status(201).json({ registeredNin:registeredNin});
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({msg:err,type:"ACTION_UNSUCCESSFUL",code:603});
   }
 });
 
@@ -212,7 +212,7 @@ router.put("/users/:id", verify, async (req, res) => {
   // only the owner of the record(loggedin user) or the admin can update the record for that user
   const searchUser = await Registrant.findById(req.params?.id, "_id, contact");
   if (!searchUser) {
-    return res.status(403).json("user not found");
+    return res.status(403).json({msg:"user not found",type:"NOT_EXIST",code:601});
   }
 
   if (
@@ -232,7 +232,8 @@ router.put("/users/:id", verify, async (req, res) => {
       res
         .status(403)
         .json(
-          "you are not authorized to edit your email and/or phone, please contact the admin"
+          
+          {msg:"you are not authorized to edit your email and/or phone, please contact the admin",type:"UNAUTHORISED",code:604}
         );
     } else {
       try {
@@ -246,9 +247,9 @@ router.put("/users/:id", verify, async (req, res) => {
         
         updateUser !== null
           ? res.status(200).json(updateUser)
-          : res.status(503).json("update was not successful");
+          : res.status(503).json({msg:"update not successful",type:"ACTION_UNSUCCESSFUL",code:603});
       } catch (error) {
-        res.status(500).json(error);
+        res.status(500).json({msg:err,type:"ACTION_UNSUCCESSFUL",code:603});
       }
     }
   } else {
@@ -270,7 +271,7 @@ router.get("/users/:id/info", verify, async (req, res) => {
       "_id, contact"
     );
     if (!searchUser) {
-      return res.status(403).json("user not found");
+      return res.status(403).json({msg:"user not found",type:"NOT_EXIST",code:601});
     }
     if (
       (verifiedEmail === searchUser?.contact?.email &&
@@ -282,10 +283,10 @@ router.get("/users/:id/info", verify, async (req, res) => {
     } else {
       res
         .status(403)
-        .json("you are not authorised to fetch another user's record");
+        .json({msg:"you are not authorised to fetch this record",type:"UNAUTHORISED",code:604});
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({msg:err,type:"ACTION_UNSUCCESSFUL",code:603});
   }
 });
 

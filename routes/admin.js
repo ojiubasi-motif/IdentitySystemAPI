@@ -5,12 +5,12 @@ import verify from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
-router.post("/is-admin/users/registration", verify, async (req, res) => {
-    console.log("the loggedin admin==>",req.user);
+router.post("/admin/users/registration", verify, async (req, res) => {
+    // console.log("the loggedin admin==>",req.user);
   if (!req?.user?.is_admin) {
     return res
       .status(403)
-      .json("you are not authorised to access this resource");
+      .json({msg:"not authorised to access this resource",type:"UNAUTHORISED",code:604});
   }
   const newDate = Date.now();
   const {
@@ -19,7 +19,7 @@ router.post("/is-admin/users/registration", verify, async (req, res) => {
     tin,
     first_name,
     last_name,
-    other_names,
+    other_name,
     date_of_birth,
     mother_maiden_name,
     house_number,
@@ -154,27 +154,27 @@ router.post("/is-admin/users/registration", verify, async (req, res) => {
       (await phoneHasRegistered.exec()) !== null ||
       (await emailHasRegistered.exec()) !== null
     ) {
-      return res.status(403).json("this user has been registered");
+      return res.status(403).json({msg:"a user with this email and/or phone exist",type:"EXIST",code:600});
     }
     const user = await newUser.save();
     const { nin: registeredNin, ...data } = user._doc;
-    res.status(201).json({ nin: registeredNin });
+    res.status(201).json({ msg:{nin: registeredNin},type:"SUCCESS", code:606 });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ msg:err,type:"ACTION_UNSUCCESSFUL", code:603 });
   }
 });
 
 // update the user record, be it password or another data
-router.put("/is-admin/users/:id/", verify, async (req, res) => {
+router.put("/admin/users/:id/", verify, async (req, res) => {
   if (!req?.user?.is_admin) {
     return res
       .status(403)
-      .json("you are not authorised to access this resource");
+      .json({msg:"not authorised to access this resource",type:"UNAUTHORISED",code:604});
   }
-  // only the owner of the record(loggedin user) or the is-admin can update the record for that user
+  // only the owner of the record(loggedin user) or the admin can update the record for that user
   const searchUser = await Registrant.findById(req.params?.id,);
   if (!searchUser) {
-    return res.status(403).json("user not found");
+    return res.status(403).json({msg:"user not found",type:"NOT_EXIST",code:601});
   }
 
   try {
@@ -188,53 +188,53 @@ router.put("/is-admin/users/:id/", verify, async (req, res) => {
       { new: true }
     ); //{new:true} returns the newly updated record
     updateUser !== null
-      ? res.status(200).json(updateUser)
-      : res.status(503).json("your spec");
+      ? res.status(200).json({msg:updateUser,type:"SUCCESS",code:606})
+      : res.status(503).json({msg:"there was an error updating the user",type:"ACTION_UNSUCCESSFUL",code:603});
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({msg:error,type:"ACTION_UNSUCCESSFUL",code:603});
   }
 });
 
 // delete a record
-router.delete("/is-admin/users/:id/", verify, async (req, res) => {
+router.delete("/admin/users/:id/", verify, async (req, res) => {
   if (!req?.user?.is_admin) {
     return res
       .status(403)
-      .json("you are not authorised to access this resource");
+      .json({msg:"not authorised to access this resource",type:"UNAUTHORISED",code:604});
   }
   try {
     await Registrant.findByIdAndDelete(req.params.id); //{new:true} returns the newly updated record
-    res.status(200).json("user has been deleted");
+    res.status(200).json({msg:"user deleted successfully",type:"SUCCESS",code:606});
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({msg:error,type:"ACTION_UNSUCCESSFUL",code:603});
   }
 });
 
 // get a user record
-router.get("/is-admin/users/:id/info", verify, async (req, res) => {
+router.get("/admin/users/:id/info", verify, async (req, res) => {
   if (!req?.user?.is_admin) {
     return res
       .status(403)
-      .json("you are not authorised to access this resource");
+      .json({msg:"not authorised to access this resource",type:"UNAUTHORISED",code:604});
   }
   try {
     const searchUser = await Registrant.findById(req.params?.id, "-password");
     if (!searchUser) {
-      return res.status(403).json("user not found");
+      return res.status(403).json({msg:"user not found",type:"NOT_EXIST",code:601});
     }
     const user = await Registrant.findById(req.params.id).select("-password");
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({msg:error,type:"ACTION_UNSUCCESSFUL",code:603});
   }
 });
 
 // get all users
-router.get("/is-admin/users", verify, async (req, res) => {
+router.get("/admin/users", verify, async (req, res) => {
   if (!req?.user?.is_admin) {
     return res
       .status(403)
-      .json("you are not authorised to access this resource");
+      .json({msg:"not authorised to access this resource",type:"UNAUTHORISED",code:604});
   }
   // check if route contains 'new' query i.e "/?new==true"
   const query = req.query.new;
@@ -245,17 +245,17 @@ router.get("/is-admin/users", verify, async (req, res) => {
       : await Registrant.find();
     res.status(200).json(users);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({msg:error,type:"ACTION_UNSUCCESSFUL",code:603});
   }
 });
 
 // get registrants stats
-router.get("/users/stats", verify, async (req, res) => {
+router.get("/admin/users/stats", verify, async (req, res) => {
   // let's find total users per month
   if (!req?.user?.is_admin) {
     return res
       .status(403)
-      .json("you are not authorised to access this resource");
+      .json({msg:"not authorised to access this resource",type:"UNAUTHORISED",code:604});
   }
   try {
     const data = await Registrant.aggregate([
@@ -273,7 +273,7 @@ router.get("/users/stats", verify, async (req, res) => {
     ]);
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({msg:error,type:"ACTION_UNSUCCESSFUL",code:603});
   }
 });
 

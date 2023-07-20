@@ -16,7 +16,7 @@ router.post("/auth/login", async (req, res) => {
         : await Auth.findOne({ phone: user });
 
     if (!userData) {
-      res.status(401).json("no user found for this email/phone, signup first");
+      res.status(401).json({msg:"wrong login credentials, couldn't login",type:"NOT_EXIST",code:601});
     } else {
       const bytes = CryptoJS.AES.decrypt(
         userData.password,
@@ -25,9 +25,9 @@ router.post("/auth/login", async (req, res) => {
       const originalPassword = bytes.toString(CryptoJS.enc.Utf8);
 
       if (originalPassword !== password) {
-        res.status(401).json("wrong login credentials, couldn't login");
+        res.status(401).json({msg:"wrong login credentials, couldn't login",type:"INVALID_CREDENTIAL",code:602});
       } else {
-        console.log("the admin record++>", userData.admin);
+        
         // send a unique secret token for loggedin user
         const accessToken = jwt.sign(
           {
@@ -36,7 +36,7 @@ router.post("/auth/login", async (req, res) => {
             last_name: userData?.last_name,
             email: userData?.email,
             phone: userData?.phone,
-            is_admin:userData?.admin ? userData?.admin : null
+            is_admin:userData?.is_admin 
           },
           process.env.PW_CRYPT,
           { expiresIn: "1d" }
@@ -47,7 +47,7 @@ router.post("/auth/login", async (req, res) => {
       }
     }
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({msg:err,type:"ACTION_UNSUCCESSFUL",code:603});
   }
 });
 
