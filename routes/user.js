@@ -7,7 +7,7 @@ import CryptoJS from "crypto-js";
 
 const router = express.Router();
 
-// register a user
+// start a user  registration
 router.post("/users", async (req, res) => {
   const { email, phone, first_name, last_name, password } = req.body;
 
@@ -27,11 +27,10 @@ router.post("/users", async (req, res) => {
       ).toString(),
     }); 
     try {
-      let emailAlreadyExist = await Auth.findOne({ email }, "email"); //return only the email field
-      let phoneAlreadyExist = await Auth.findOne({ phone }, "phone"); //return only the phone field
+      let userAlreadyExist = await Auth.findOne({ $or: [{ email }, { phone }] }, "email phone"); //return only the email field
+      // let phoneAlreadyExist = await Auth.findOne({ phone }, "phone"); //return only the phone field
       if (
-        emailAlreadyExist?.email == email ||
-        phoneAlreadyExist?.phone == phone
+        userAlreadyExist
       ) {
         res
           .status(403)
@@ -46,14 +45,14 @@ router.post("/users", async (req, res) => {
         } = savedUser._doc;
         res
           .status(201)
-          .json({ data, password: !password ? initialPassword : null });
+          .json({ ...data, password: !password ? initialPassword : null });
       }
     } catch (err) {
       console.log(err);
     }
   }
 });
-
+// ===complete registration
 router.post("/users/complete-registration", verify, async (req, res) => {
   const {
     sex,
@@ -219,20 +218,11 @@ router.put("/users/:id", verify, async (req, res) => {
     (req.user?.email === searchUser?.contact?.email &&
       req.user?.phone === searchUser?.contact?.mobile)
   ) {
-    // check if it's password that's being changed and encrypt it accordingly
-    // if (req.body.password) {
-    //   req.body.password = CryptoJS.AES.encrypt(
-    //     req.body.password,
-    //     process.env.PW_CRYPT
-    //   ).toString();
-    // }
-    // if it's not the password being updated, then continue with the try/catch
-    // check if user wants to update email
+    
     if (req.body?.contact) {
       res
         .status(403)
-        .json(
-          
+        .json(         
           {msg:"you are not authorized to edit your email and/or phone, please contact the admin",type:"UNAUTHORISED",code:604}
         );
     } else {
@@ -243,8 +233,7 @@ router.put("/users/:id", verify, async (req, res) => {
             $set: req.body,
           },
           { new: true }
-        )//{new:true} returns the newly updated record
-        
+        )//{new:true} returns the newly updated record 
         updateUser !== null
           ? res.status(200).json(updateUser)
           : res.status(503).json({msg:"update not successful",type:"ACTION_UNSUCCESSFUL",code:603});
@@ -283,7 +272,7 @@ router.get("/users/:id/info", verify, async (req, res) => {
     } else {
       res
         .status(403)
-        .json({msg:"you are not authorised to fetch this record",type:"UNAUTHORISED",code:604});
+        .json({msg:"you are not authorised to fetch this user's record",type:"UNAUTHORISED",code:604});
     }
   } catch (error) {
     res.status(500).json({msg:err,type:"ACTION_UNSUCCESSFUL",code:603});

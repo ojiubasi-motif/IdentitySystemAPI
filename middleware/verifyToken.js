@@ -6,7 +6,7 @@ function verify(req, res, next){
         
         const token = authHeader.split(" ")[1];
 
-        jwt.verify(token, process.env.PW_CRYPT, (err, user)=>{
+        jwt.verify(token, process.env.JWT_SECRET, (err, user)=>{
             if(err) return res.status(403).json({msg:"your token is invalid",type:"INVALID_CREDENTIAL",code:602});
             req.user = user
             next();//continue execution after verification

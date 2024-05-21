@@ -4,7 +4,6 @@ import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
 
 const router = express.Router();
-
 // login===NB:you can login with either your email or phone
 router.post("/auth/login", async (req, res) => {
   const { user, password } = req.body;
@@ -14,7 +13,6 @@ router.post("/auth/login", async (req, res) => {
       user.toString().search("@") >= 0
         ? await Auth.findOne({ email: user })
         : await Auth.findOne({ phone: user });
-
     if (!userData) {
       res.status(401).json({msg:"wrong login credentials, couldn't login",type:"NOT_EXIST",code:601});
     } else {
@@ -38,7 +36,7 @@ router.post("/auth/login", async (req, res) => {
             phone: userData?.phone,
             is_admin:userData?.is_admin 
           },
-          process.env.PW_CRYPT,
+          process.env.JWT_SECRET,
           { expiresIn: "1d" }
         );
         //do not include the password when sending query response

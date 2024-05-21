@@ -146,8 +146,8 @@ router.post("/admin/users/registration", verify, async (req, res) => {
     "contact.mobile"
   );
   const emailHasRegistered = Registrant.findOne(
-    { "contact.mobile": email },
-    "contact.mobile"
+    { "contact.email": email },
+    "contact.email"
   );
   try {
     if (
